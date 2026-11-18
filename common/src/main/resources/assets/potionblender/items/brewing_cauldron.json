@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "potionblender:item/brewing_cauldron"
+  }
+}

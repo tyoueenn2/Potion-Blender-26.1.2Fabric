@@ -1,7 +1,7 @@
 package mod.motivationaldragon.potionblender.blockentity;
 
 import mod.motivationaldragon.potionblender.blockentities.BrewingCauldronBlockEntity;
-import net.fabricmc.fabric.api.blockview.v2.RenderDataBlockEntity;
+import net.fabricmc.fabric.api.blockgetter.v2.RenderDataBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;

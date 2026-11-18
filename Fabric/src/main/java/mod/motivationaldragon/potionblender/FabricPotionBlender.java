@@ -7,10 +7,10 @@ import mod.motivationaldragon.potionblender.datatype.PotionBlender;
 import mod.motivationaldragon.potionblender.item.ModItem;
 import mod.motivationaldragon.potionblender.recipes.PotionBlenderRecipes;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTabs;
 
 import java.util.function.BiConsumer;
@@ -26,13 +26,14 @@ public class FabricPotionBlender implements ModInitializer {
 		PotionBlenderBlock.registerBlockItem(bind(BuiltInRegistries.ITEM));
 		PotionBlenderRecipes.registerRecipeSerializer(bind(BuiltInRegistries.RECIPE_SERIALIZER));
 		PotionBlenderRecipes.registerRecipeType(bind(BuiltInRegistries.RECIPE_TYPE));
-		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(entries -> ModItem.registerFunctionalBlocksItems(entries::accept));
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(entries -> ModItem.registerFunctionalBlocksItems(entries::accept));
 		PotionBlenderCriterionTrigger.register(bind(BuiltInRegistries.TRIGGER_TYPES));
 		PotionBlender.registerDataComponentType(bind(BuiltInRegistries.DATA_COMPONENT_TYPE));
 		FabricBlockEntities.init();
+        net.fabricmc.fabric.api.recipe.v1.sync.RecipeSynchronization.synchronizeRecipeSerializer(mod.motivationaldragon.potionblender.recipes.BrewingCauldronRecipe.SERIALIZER);
 	}
 
-	public static <T> BiConsumer<T, ResourceLocation> bind(Registry<? super T> registry) {
+	public static <T> BiConsumer<T, Identifier> bind(Registry<? super T> registry) {
 		return (t, id) -> Registry.register(registry, id, t);
 	}
 }

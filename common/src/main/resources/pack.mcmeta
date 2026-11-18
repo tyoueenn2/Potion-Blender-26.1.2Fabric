@@ -1,6 +1,7 @@
 {
-    "pack": {
-        "description": "${mod_name}",
-        "pack_format": 8
-    }
+  "pack": {
+    "description": "Potion Blender",
+    "min_format": 84,
+    "max_format": 84
+  }
 }

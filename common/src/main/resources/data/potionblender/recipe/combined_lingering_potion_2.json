@@ -1,21 +1,15 @@
 {
-  "type" : "potionblender:potion_blending",
-  "brewingTime" : 140,
+  "type": "potionblender:potion_blending",
+  "brewingTime": 140,
   "usePotionMergingRules": true,
   "isOrdered": true,
   "ingredients": [
-    {
-      "item": "minecraft:potion"
-    },
-    {
-      "item": "minecraft:potion"
-    },
-    {
-      "item": "minecraft:dragon_breath"
-    }
+    "minecraft:potion",
+    "minecraft:potion",
+    "minecraft:dragon_breath"
   ],
-  "output" : {
-    "id" : "minecraft:lingering_potion",
-    "count" : 1
+  "output": {
+    "id": "minecraft:lingering_potion",
+    "count": 1
   }
 }

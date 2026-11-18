@@ -21,7 +21,7 @@ public class ModUtils {
     }
 
     public static boolean isTagValueTrue(@NotNull CompoundTag nbtCompound, String NbtKey) {
-        return nbtCompound.contains(NbtKey) && nbtCompound.getBoolean(NbtKey);
+        return nbtCompound.contains(NbtKey) && nbtCompound.getBooleanOr(NbtKey, false);
     }
     public static float lerp(float min, float max, float f)
     {

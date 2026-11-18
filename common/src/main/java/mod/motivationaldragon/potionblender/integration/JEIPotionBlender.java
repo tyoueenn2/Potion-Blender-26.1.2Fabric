@@ -7,7 +7,7 @@ import mezz.jei.api.registration.IRecipeRegistration;
 import mod.motivationaldragon.potionblender.Constants;
 import mod.motivationaldragon.potionblender.recipes.BrewingCauldronRecipe;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import org.jetbrains.annotations.NotNull;
@@ -22,8 +22,8 @@ public class JEIPotionBlender implements IModPlugin {
 	}
 
 	@Override
-	public @NotNull ResourceLocation getPluginUid() {
-		return  ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "brewing_cauldron_jei_plugin");
+	public @NotNull Identifier getPluginUid() {
+		return  Identifier.fromNamespaceAndPath(Constants.MOD_ID, "brewing_cauldron_jei_plugin");
 	}
 	@Override
 	public void registerCategories(IRecipeCategoryRegistration registration) {
@@ -31,11 +31,10 @@ public class JEIPotionBlender implements IModPlugin {
 	}
 	@Override
 	public void registerRecipes(IRecipeRegistration registration) {
-		RecipeManager recipeManager = Minecraft.getInstance().level.getRecipeManager();
-		List<BrewingCauldronRecipe> recipes = recipeManager.getAllRecipesFor(BrewingCauldronRecipe.Type.INSTANCE)
-				.stream()
-				.map(RecipeHolder::value)
-				.toList();
+        var connection = Minecraft.getInstance().getConnection();
+        if (connection == null) return;
+        List<BrewingCauldronRecipe> recipes = connection.recipes().getSynchronizedRecipes()
+                .getAllOfType(BrewingCauldronRecipe.Type.INSTANCE).stream().map(RecipeHolder::value).toList();
 		registration.addRecipes(BrewingCauldronJeiCategory.brewing_cauldron_recipe_type, recipes);
 	}
 

@@ -7,13 +7,13 @@ import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
-import mezz.jei.api.recipe.RecipeType;
+import mezz.jei.api.recipe.types.IRecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import mod.motivationaldragon.potionblender.Constants;
 import mod.motivationaldragon.potionblender.block.PotionBlenderBlock;
 import mod.motivationaldragon.potionblender.recipes.BrewingCauldronRecipe;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
@@ -23,10 +23,10 @@ public class BrewingCauldronJeiCategory implements IRecipeCategory<BrewingCauldr
 	//TODO make potion display properly and not as uncraftable potion
 
 
-	public static final ResourceLocation UID =  ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "brewing_cauldron");
-	public static final ResourceLocation BACKGROUND_TEXTURE =  ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "textures/gui/jei/brewing_cauldron_gui.png");
+	public static final Identifier UID =  Identifier.fromNamespaceAndPath(Constants.MOD_ID, "brewing_cauldron");
+	public static final Identifier BACKGROUND_TEXTURE =  Identifier.fromNamespaceAndPath(Constants.MOD_ID, "textures/gui/jei/brewing_cauldron_gui.png");
 
-	public static final RecipeType<BrewingCauldronRecipe> brewing_cauldron_recipe_type = new RecipeType<>(UID, BrewingCauldronRecipe.class);
+	public static final IRecipeType<BrewingCauldronRecipe> brewing_cauldron_recipe_type = IRecipeType.create(UID, BrewingCauldronRecipe.class);
 
 	private final IDrawable background;
 	private final IDrawable icon;
@@ -41,7 +41,7 @@ public class BrewingCauldronJeiCategory implements IRecipeCategory<BrewingCauldr
 	 * @since 9.5.0
 	 */
 	@Override
-	public @NotNull RecipeType<BrewingCauldronRecipe> getRecipeType() {
+	public @NotNull IRecipeType<BrewingCauldronRecipe> getRecipeType() {
 		return brewing_cauldron_recipe_type;
 	}
 
@@ -60,9 +60,12 @@ public class BrewingCauldronJeiCategory implements IRecipeCategory<BrewingCauldr
 	 * Returns the drawable background for a single recipe in this category.
 	 */
 	@Override
-	public @NotNull IDrawable getBackground() {
-		return this.background;
-	}
+	public int getWidth() { return 166; }
+    @Override public int getHeight() { return 74; }
+    @Override public void createRecipeExtras(mezz.jei.api.gui.widgets.IRecipeExtrasBuilder builder,
+                                              BrewingCauldronRecipe recipe, IFocusGroup focuses) {
+        builder.addDrawable(background, 0, 0);
+    }
 
 	/**
 	 * Icon for the category tab.
@@ -95,8 +98,8 @@ public class BrewingCauldronJeiCategory implements IRecipeCategory<BrewingCauldr
 		for (int i = 0; i < recipe.getIngredients().size(); i++) {
 			Ingredient ingredient = recipe.getIngredients().get(i);
 			builder.addSlot(RecipeIngredientRole.INPUT, 38 + i * 18, 4)
-					.addIngredients(ingredient);
+					.add(ingredient);
 		}
-		builder.addSlot(RecipeIngredientRole.OUTPUT, 74, 52).addItemStack(recipe.getOutput());
+		builder.addSlot(RecipeIngredientRole.OUTPUT, 74, 52).add(recipe.getOutput());
 	}
 }

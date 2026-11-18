@@ -23,8 +23,8 @@ import java.util.Optional;
 
 public class CombinedTippedArrowRecipe extends CustomRecipe {
 
-    public CombinedTippedArrowRecipe(CraftingBookCategory category) {
-        super(category);
+    public CombinedTippedArrowRecipe() {
+        super();
     }
 
 
@@ -50,7 +50,7 @@ public class CombinedTippedArrowRecipe extends CustomRecipe {
     }
 
     @Override
-    public @NotNull ItemStack assemble(CraftingInput craftingInput, @NotNull HolderLookup.Provider provider) {
+    public @NotNull ItemStack assemble(CraftingInput craftingInput) {
         ItemStack potionItemStack = craftingInput.getItem(1 + craftingInput.width());
         if (!ModUtils.isCombinedLingeringPotion(potionItemStack)) {
             return ItemStack.EMPTY;
@@ -64,15 +64,12 @@ public class CombinedTippedArrowRecipe extends CustomRecipe {
                 statusEffectInstances.add(new MobEffectInstance(effectInstance.getEffect(), effectInstance.getDuration() / 2,
                         effectInstance.getAmplifier()));
         }
-        craftedItemStack.set(DataComponents.POTION_CONTENTS, new PotionContents(Optional.empty(),Optional.empty(),statusEffectInstances));
+        craftedItemStack.set(DataComponents.POTION_CONTENTS, new PotionContents(Optional.empty(), Optional.empty(), statusEffectInstances, Optional.empty()));
+        craftedItemStack.set(DataComponents.POTION_DURATION_SCALE, 1.0F);
         craftedItemStack.set(PotionBlender.potionTypeData, PotionType.TIPPEDARROW.code);
         return craftedItemStack;
     }
 
     @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return width >= 2 && height >= 2;
-    }
-    @Override
-    public @NotNull RecipeSerializer<?> getSerializer() {return PotionBlenderRecipes.COMBINED_TIPPED_ARROW_SERIALIZER;}
+    public @NotNull RecipeSerializer<CombinedTippedArrowRecipe> getSerializer() {return PotionBlenderRecipes.COMBINED_TIPPED_ARROW_SERIALIZER;}
 }

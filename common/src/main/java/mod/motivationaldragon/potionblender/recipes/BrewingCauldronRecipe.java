@@ -7,234 +7,110 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import mod.motivationaldragon.potionblender.Constants;
 import mod.motivationaldragon.potionblender.config.ConfigController;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.NonNullList;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.PotionItem;
-import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.stream.IntStream;
+import java.util.ArrayList;
+import java.util.List;
 
-public class BrewingCauldronRecipe implements Recipe<MultipleInputRecipe> {
+public record BrewingCauldronRecipe(int brewingTime, boolean usePotionMergingRules, int color,
+                                   boolean isOrdered, double decayRate, List<Ingredient> ingredients,
+                                   ItemStackTemplate output) implements Recipe<MultipleInputRecipe> {
+    public BrewingCauldronRecipe {
+        if (usePotionMergingRules && !(output.item().value() instanceof PotionItem)) {
+            throw new IllegalArgumentException("Potion merging recipes must produce a potion");
+        }
+        ingredients = List.copyOf(ingredients);
+    }
 
+    private static final Codec<List<Ingredient>> INGREDIENTS = Ingredient.CODEC.listOf().validate(list ->
+            list.isEmpty() || list.size() > ConfigController.getConfig().getCauldronInventorySize()
+                    ? DataResult.error(() -> "Invalid brewing cauldron ingredient count") : DataResult.success(list));
+    public static final MapCodec<BrewingCauldronRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            Codec.intRange(1, Integer.MAX_VALUE).fieldOf("brewingTime").forGetter(BrewingCauldronRecipe::brewingTime),
+            Codec.BOOL.optionalFieldOf("usePotionMergingRules", false).forGetter(BrewingCauldronRecipe::usePotionMergingRules),
+            Codec.INT.optionalFieldOf("color", Constants.WATER_TINT).forGetter(BrewingCauldronRecipe::color),
+            Codec.BOOL.fieldOf("isOrdered").forGetter(BrewingCauldronRecipe::isOrdered),
+            Codec.doubleRange(1.0, Double.MAX_VALUE).optionalFieldOf("decayRate", 2.0).forGetter(BrewingCauldronRecipe::decayRate),
+            INGREDIENTS.fieldOf("ingredients").forGetter(BrewingCauldronRecipe::ingredients),
+            ItemStackTemplate.CODEC.fieldOf("output").forGetter(BrewingCauldronRecipe::output)
+    ).apply(instance, BrewingCauldronRecipe::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, BrewingCauldronRecipe> STREAM_CODEC = StreamCodec.of(
+            BrewingCauldronRecipe::toNetwork, BrewingCauldronRecipe::fromNetwork);
+    public static final RecipeSerializer<BrewingCauldronRecipe> SERIALIZER = new RecipeSerializer<>(CODEC, STREAM_CODEC);
 
-	private final boolean usePotionMergingRules;
+    @Override
+    public boolean matches(MultipleInputRecipe input, Level level) {
+        if (input.size() != ingredients.size()) return false;
+        if (isOrdered) {
+            for (int i = 0; i < ingredients.size(); i++) if (!ingredients.get(i).test(input.getItem(i))) return false;
+            return true;
+        }
+        // Backtracking assigns each input to a distinct ingredient, including overlapping tags.
+        return matchesUnordered(input, 0, new boolean[ingredients.size()]);
+    }
 
-	private final int color;
+    private boolean matchesUnordered(MultipleInputRecipe input, int slot, boolean[] used) {
+        if (slot == input.size()) return true;
+        for (int i = 0; i < ingredients.size(); i++) {
+            if (!used[i] && ingredients.get(i).test(input.getItem(slot))) {
+                used[i] = true;
+                if (matchesUnordered(input, slot + 1, used)) return true;
+                used[i] = false;
+            }
+        }
+        return false;
+    }
 
-	private final double decayRate;
+    @Override public ItemStack assemble(MultipleInputRecipe input) { return output.create(); }
+    @Override public RecipeSerializer<BrewingCauldronRecipe> getSerializer() { return SERIALIZER; }
+    @Override public RecipeType<BrewingCauldronRecipe> getType() { return Type.INSTANCE; }
+    @Override public boolean isSpecial() { return true; }
+    @Override public boolean showNotification() { return false; }
+    @Override public String group() { return ""; }
+    @Override public PlacementInfo placementInfo() { return PlacementInfo.NOT_PLACEABLE; }
+    @Override public RecipeBookCategory recipeBookCategory() { return RecipeBookCategories.CAMPFIRE; }
 
-	private final boolean isOrdered;
-	private final int brewingTime;
+    public ItemStack getResultItem(HolderLookup.Provider provider) { return output.create(); }
+    public ItemStack getOutput() { return output.create(); }
+    public List<Ingredient> getIngredients() { return ingredients; }
+    public int getBrewingTime() { return brewingTime; }
+    public int getColor() { return color; }
+    public double getDecayRate() { return decayRate; }
+    public boolean isOrdered() { return isOrdered; }
+    public boolean usePotionMeringRules() { return usePotionMergingRules; }
 
-	private final NonNullList<Ingredient> ingredients;
-	private final ItemStack output;
+    public static class Type implements RecipeType<BrewingCauldronRecipe> {
+        public static final Type INSTANCE = new Type();
+        public static final String ID = "brewing_cauldron_recipe";
+    }
 
-	public BrewingCauldronRecipe(
-	                             int brewingTime,
-	                             boolean usePotionMergingRules,
-	                             int color,
-	                             boolean isOrdered,
-	                             double decayRate,
-	                             NonNullList<Ingredient> ingredients,
-	                             ItemStack output) {
+    private static BrewingCauldronRecipe fromNetwork(RegistryFriendlyByteBuf buf) {
+        int time = buf.readVarInt();
+        boolean merging = buf.readBoolean();
+        int color = buf.readInt();
+        boolean ordered = buf.readBoolean();
+        double decay = buf.readDouble();
+        int size = buf.readVarInt();
+        if (size < 1 || size > 256) throw new IllegalArgumentException("Invalid ingredient count: " + size);
+        List<Ingredient> ingredients = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) ingredients.add(Ingredient.CONTENTS_STREAM_CODEC.decode(buf));
+        return new BrewingCauldronRecipe(time, merging, color, ordered, decay, ingredients, ItemStackTemplate.STREAM_CODEC.decode(buf));
+    }
 
-		//Disallow using usePotionMergingRules if the output is not a potion
-		if (usePotionMergingRules && !(output.getItem() instanceof PotionItem)) {
-			throw new IllegalArgumentException("Output must be a potion if usePotionMergingRules is true");
-		}
-
-		//At metadata to display potion item in JEI, otherwise it will display as an uncraftable potion
-		// Since test are performed on the item class, NBT data is not relevant and can be set to whatever we want
-		if (usePotionMergingRules) {
-			for (Ingredient ingredient : ingredients) {
-				for (ItemStack stack : ingredient.getItems()) {
-					if ((stack.getItem() instanceof PotionItem)) {
-						stack.set(DataComponents.CUSTOM_NAME, Component.translatable(Constants.MOD_ID + ".recipe.potion_wildcard_names"));
-					}
-				}
-			}
-			output.set(DataComponents.CUSTOM_NAME,Component.translatable(Constants.MOD_ID + ".recipe.merged_potion_wildcard_names"));
-		}
-
-		this.ingredients = ingredients;
-		this.brewingTime = brewingTime;
-		this.color = color;
-		this.decayRate = decayRate;
-		this.isOrdered = isOrdered;
-		this.usePotionMergingRules = usePotionMergingRules;
-		this.output = output;
-	}
-
-	@Override
-	public boolean matches(@NotNull MultipleInputRecipe recipeInput, @NotNull Level level) {
-		if (level.isClientSide()) {
-			return false;
-		}
-
-		if (isOrdered) {
-			//For each ingredient in ingredients, there is an item in the recipeInput that matches the ingredient at the same index
-			if (recipeInput.size() != ingredients.size()) {
-				return false;
-			}
-			return IntStream.range(0, ingredients.size()).allMatch(i -> ingredients.get(i).test(recipeInput.getItem(i)));
-		} else {
-			//For each ingredient, there is at lease one item in the recipeInput that matches the ingredient
-			if (recipeInput.size() != ingredients.size()) {
-				return false;
-			}
-			return ingredients.stream().allMatch(ingredient -> IntStream.range(0, recipeInput.size())
-					.anyMatch(i -> ingredient.test(recipeInput.getItem(i))));
-		}
-	}
-
-
-
-	@Override
-	public @NotNull ItemStack assemble(@NotNull MultipleInputRecipe var1, HolderLookup.@NotNull Provider provider) {
-		return output.copy();
-	}
-
-
-	@Override
-	public boolean canCraftInDimensions(int var1, int var2) {
-		return true;
-	}
-
-	@Override
-	public @NotNull ItemStack getResultItem(@NotNull HolderLookup.Provider provider) {
-		return output;
-	}
-
-	@Override
-	public @NotNull RecipeSerializer<?> getSerializer() {
-		return CauldronRecipeSerializer.INSTANCE;
-	}
-
-
-	public int getBrewingTime() {
-		return brewingTime;
-	}
-
-	@Override
-	public @NotNull RecipeType<?> getType() {
-		return Type.INSTANCE;
-	}
-
-	@Override
-	public @NotNull NonNullList<Ingredient> getIngredients() {
-		return this.ingredients;
-	}
-
-
-
-	public static class Type implements RecipeType<BrewingCauldronRecipe> {
-		public static final Type INSTANCE = new Type();
-		public static final String ID = "brewing_cauldron_recipe";
-	}
-
-	public static class CauldronRecipeSerializer implements RecipeSerializer<BrewingCauldronRecipe> {
-
-		public static final CauldronRecipeSerializer INSTANCE = new CauldronRecipeSerializer();
-
-		private static final MapCodec<BrewingCauldronRecipe> CODEC = RecordCodecBuilder.mapCodec(
-				in -> in.group(
-						Codec.INT.fieldOf("brewingTime").forGetter(x->x.brewingTime),
-						Codec.BOOL.optionalFieldOf("usePotionMergingRules", false).forGetter(x->x.usePotionMergingRules),
-						Codec.INT.optionalFieldOf("color", Constants.WATER_TINT).forGetter(x->x.color),
-						Codec.BOOL.fieldOf("isOrdered").forGetter(x->x.isOrdered),
-						Codec.DOUBLE.optionalFieldOf("decayRate",2.0).forGetter(x->x.decayRate),
-
-						Ingredient.CODEC_NONEMPTY.listOf().fieldOf("ingredients")
-								.flatXmap(ingredientList -> {
-									Ingredient[] ingredientArr = ingredientList.stream().filter(i -> !i.isEmpty()).toArray(Ingredient[]::new);
-									if (ingredientArr.length == 0) {
-										return DataResult.error(() -> "No ingredients for brewing cauldron recipe");
-									}
-									return DataResult.success(NonNullList.of(Ingredient.EMPTY, ingredientArr));
-								}, DataResult::success).forGetter(x-> {
-									if(x.ingredients.size() > ConfigController.getConfig().getCauldronInventorySize()) {
-										throw new IllegalArgumentException("Too many ingredients for brewing cauldron recipe");
-									}
-									return x.ingredients;
-								}),
-						ItemStack.CODEC.fieldOf("output").flatXmap(
-								itemStack -> {
-									if (itemStack.isEmpty()) {
-										return DataResult.error(() -> "Empty output for brewing cauldron recipe");
-									}
-									return DataResult.success(itemStack);
-								}, DataResult::success).forGetter(x->x.output)
-				).apply(in, BrewingCauldronRecipe::new)
-		);
-
-		public static final StreamCodec<RegistryFriendlyByteBuf, BrewingCauldronRecipe> STREAM_CODEC = StreamCodec.of(CauldronRecipeSerializer::toNetwork, CauldronRecipeSerializer::fromNetwork);
-
-
-		@Override
-		public @NotNull MapCodec<BrewingCauldronRecipe> codec() {
-			return CODEC;
-		}
-
-		@Override
-		public @NotNull StreamCodec<RegistryFriendlyByteBuf, BrewingCauldronRecipe> streamCodec() {
-			return STREAM_CODEC;
-		}
-
-		private static @NotNull BrewingCauldronRecipe fromNetwork(RegistryFriendlyByteBuf buff) {
-			int brewingTime = buff.readInt();
-			boolean usePotionMergingRules = buff.readBoolean();
-			int color = buff.readInt();
-			boolean isOrdered = buff.readBoolean();
-			double decayRate = buff.readDouble();
-			NonNullList<Ingredient> ingredients = NonNullList.withSize(buff.readInt(), Ingredient.EMPTY);
-			ingredients.replaceAll(ignored -> Ingredient.CONTENTS_STREAM_CODEC.decode(buff));
-			ItemStack output = ItemStack.STREAM_CODEC.decode(buff);
-			return new BrewingCauldronRecipe(brewingTime, usePotionMergingRules, color, isOrdered, decayRate, ingredients, output);
-		}
-
-
-		private static void toNetwork(RegistryFriendlyByteBuf buff, BrewingCauldronRecipe brewingCauldronRecipe) {
-			buff.writeInt(brewingCauldronRecipe.brewingTime);
-			buff.writeBoolean(brewingCauldronRecipe.usePotionMergingRules);
-			buff.writeInt(brewingCauldronRecipe.color);
-			buff.writeBoolean(brewingCauldronRecipe.isOrdered);
-			buff.writeDouble(brewingCauldronRecipe.decayRate);
-			NonNullList<Ingredient> recipeIngredients = brewingCauldronRecipe.getIngredients();
-			buff.writeInt(recipeIngredients.size());
-			for (Ingredient ingredient : recipeIngredients) {
-				Ingredient.CONTENTS_STREAM_CODEC.encode(buff, ingredient);
-			}
-			ItemStack.STREAM_CODEC.encode(buff,brewingCauldronRecipe.output);
-		}
-	}
-
-	public ItemStack getOutput() {
-		return output;
-	}
-
-	public int getColor() {
-		return color;
-	}
-
-	public boolean isOrdered() {
-		return isOrdered;
-	}
-
-
-	public boolean usePotionMeringRules() {
-		return usePotionMergingRules;
-	}
-
-	public double getDecayRate() {
-		return decayRate;
-	}
+    private static void toNetwork(RegistryFriendlyByteBuf buf, BrewingCauldronRecipe recipe) {
+        buf.writeVarInt(recipe.brewingTime);
+        buf.writeBoolean(recipe.usePotionMergingRules);
+        buf.writeInt(recipe.color);
+        buf.writeBoolean(recipe.isOrdered);
+        buf.writeDouble(recipe.decayRate);
+        buf.writeVarInt(recipe.ingredients.size());
+        for (Ingredient ingredient : recipe.ingredients) Ingredient.CONTENTS_STREAM_CODEC.encode(buf, ingredient);
+        ItemStackTemplate.STREAM_CODEC.encode(buf, recipe.output);
+    }
 }

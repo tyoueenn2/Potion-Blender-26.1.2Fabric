@@ -2,8 +2,8 @@ package mod.motivationaldragon.potionblender.advancements;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.advancements.Criterion;
-import net.minecraft.advancements.critereon.ContextAwarePredicate;
-import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
+import net.minecraft.advancements.criterion.ContextAwarePredicate;
+import net.minecraft.advancements.criterion.SimpleCriterionTrigger;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,7 +22,7 @@ public class CauldronExplosionTrigger extends SimpleCriterionTrigger<CauldronExp
 
 	public record TriggerInstance(Optional<ContextAwarePredicate> player) implements SimpleCriterionTrigger.SimpleInstance{
 
-		public static final Codec<CauldronExplosionTrigger.TriggerInstance> CODEC = Codec.unit(new TriggerInstance(Optional.empty()));
+		public static final Codec<CauldronExplosionTrigger.TriggerInstance> CODEC = com.mojang.serialization.MapCodec.unit(new TriggerInstance(Optional.empty())).codec();
 		public static Criterion<TriggerInstance> blewCauldron() {
 			return PotionBlenderCriterionTrigger.BLEW_CAULDRON.createCriterion(new TriggerInstance(Optional.empty()));
 		}

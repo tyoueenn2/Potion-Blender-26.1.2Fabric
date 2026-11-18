@@ -2,7 +2,9 @@ package mod.motivationaldragon.potionblender.block;
 
 import mod.motivationaldragon.potionblender.Constants;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -19,7 +21,7 @@ public class PotionBlenderBlock {
 	}
 
 	public static final Block BREWING_CAULDRON_BLOCK = new BrewingCauldron(
-			(BlockBehaviour.Properties.of()
+			(BlockBehaviour.Properties.of().setId(ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(Constants.MOD_ID, "brewing_cauldron")))
 					.mapColor(MapColor.STONE)
 					.requiresCorrectToolForDrops()
 					.strength(2.0F)
@@ -32,14 +34,14 @@ public class PotionBlenderBlock {
 						}
 					})));
 
-	public static final BlockItem BREWING_CAULDRON_ITEM = new BlockItem(BREWING_CAULDRON_BLOCK, new Item.Properties());
+	public static final BlockItem BREWING_CAULDRON_ITEM = new BlockItem(BREWING_CAULDRON_BLOCK, new Item.Properties().setId(ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(Constants.MOD_ID, "brewing_cauldron"))).useBlockDescriptionPrefix());
 
 
-	public static void registerBlock(BiConsumer<Block, ResourceLocation> r) {
-		r.accept(BREWING_CAULDRON_BLOCK,  ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "brewing_cauldron"));
+	public static void registerBlock(BiConsumer<Block, Identifier> r) {
+		r.accept(BREWING_CAULDRON_BLOCK,  Identifier.fromNamespaceAndPath(Constants.MOD_ID, "brewing_cauldron"));
 	}
 
-	public static void registerBlockItem(BiConsumer<Item, ResourceLocation> r) {
+	public static void registerBlockItem(BiConsumer<Item, Identifier> r) {
 
 		r.accept(BREWING_CAULDRON_ITEM, BuiltInRegistries.BLOCK.getKey(BREWING_CAULDRON_BLOCK));
 		Constants.LOG.debug("Registered all block");

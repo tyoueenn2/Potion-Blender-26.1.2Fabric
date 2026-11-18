@@ -2,17 +2,14 @@
   "required": true,
   "minVersion": "0.8",
   "package": "mod.motivationaldragon.potionblender.mixins",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_25",
   "mixins": [
     "CampfireMixin",
-    "LingeringPotionMixin",
-    "PotionEntityMixin",
     "PotionItemMixin",
     "ThrownPotionMixin",
     "TippedArrowItemMixin"
   ],
   "injectors": {
     "defaultRequire": 1
-  },
-  "refmap": "potionblender.refmap.json"
+  }
 }

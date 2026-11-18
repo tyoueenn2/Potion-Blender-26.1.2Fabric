@@ -15,7 +15,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -33,7 +33,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.BooleanOp;
@@ -49,7 +49,7 @@ import java.util.Set;
 @SuppressWarnings("deprecation")
 public class BrewingCauldron extends BaseEntityBlock {
 
-	public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+	public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
 	public static final BooleanProperty HAS_FLUID = BooleanProperty.create("has_fluid");
 	public static final BooleanProperty IS_BREWING = BooleanProperty.create("is_brewing");
 
@@ -95,33 +95,24 @@ public class BrewingCauldron extends BaseEntityBlock {
     }
 
 
-	@Override
-	public void onRemove(BlockState state, Level level, BlockPos blockPos, BlockState newState, boolean b) {
-
-		if (!level.isClientSide() && state.getBlock() != newState.getBlock()) {
-			tryGetBlockEntity(level, blockPos).ifPresent(brewingCauldronBlockEntity ->
-					Containers.dropContents(level, blockPos, brewingCauldronBlockEntity.getInventory()));
-		}
-		super.onRemove(state, level, blockPos, state, b);
-	}
 
 	@Override
 	@NotNull
-	public ItemInteractionResult useItemOn(@NotNull ItemStack itemStack, @NotNull BlockState state, Level world, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
+	public InteractionResult useItemOn(@NotNull ItemStack itemStack, @NotNull BlockState state, Level world, @NotNull BlockPos pos, @NotNull Player player, @NotNull InteractionHand hand, @NotNull BlockHitResult hit) {
 		if (!world.isClientSide()) {
 			// Shovel check is hardcoded with the shovel class to handle modded shovels
 			if (dowseItems.contains(player.getItemInHand(hand).getItem()) || player.getMainHandItem().getItem() instanceof ShovelItem) {
 				dowse(world, pos);
-				return ItemInteractionResult.CONSUME;
+				return InteractionResult.CONSUME;
 			} else if (litItems.contains(player.getItemInHand(hand).getItem()) && !state.getValue(LIT)) {
 				ignite(state, world, pos);
-				return ItemInteractionResult.CONSUME;
+				return InteractionResult.CONSUME;
 			} else {
 				tryGetBlockEntity(world, pos).ifPresent(brewingCauldronBlockEntity ->
 						brewingCauldronBlockEntity.onUseDelegate(state, world, pos, player));
 			}
 		}
-		return ItemInteractionResult.SUCCESS;
+		return InteractionResult.SUCCESS;
 	}
 
 	private static void ignite(@NotNull BlockState state, Level world, @NotNull BlockPos pos) {
@@ -170,7 +161,7 @@ public class BrewingCauldron extends BaseEntityBlock {
 			}
 
 			int color = brewingCauldronBlockEntity.get().getWaterColor();
-			ParticleOptions coloredSmoke = new DustParticleOptions(Vec3.fromRGB24(color).toVector3f(), 1.0f);
+			ParticleOptions coloredSmoke = new DustParticleOptions(color, 1.0f);
 			float x = pos.getX() + random.nextIntBetweenInclusive(2, 8) / 10f;
 			float z = pos.getZ() + random.nextIntBetweenInclusive(2, 8) / 10f;
 			world.addParticle(coloredSmoke, x, pos.getY() + 1d, z, 0, 0, 0);
@@ -237,7 +228,7 @@ public class BrewingCauldron extends BaseEntityBlock {
     }
 
 	@Override
-	public void fallOn(@NotNull Level world, @NotNull BlockState blockState, @NotNull BlockPos pos, Entity entity, float speed) {
+	public void fallOn(@NotNull Level world, @NotNull BlockState blockState, @NotNull BlockPos pos, Entity entity, double speed) {
 
 		Optional<BrewingCauldronBlockEntity> brewingCauldronBlockEntity = tryGetBlockEntity(entity.level(), entity.blockPosition());
 		if (brewingCauldronBlockEntity.isPresent() && !entity.level().isClientSide()) {

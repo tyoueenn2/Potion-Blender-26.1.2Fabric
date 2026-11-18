@@ -6,12 +6,8 @@
     "Y"
   ],
   "key": {
-    "X": {
-      "item": "minecraft:cauldron"
-    },
-    "Y": {
-      "item": "minecraft:campfire"
-    }
+    "X": "minecraft:cauldron",
+    "Y": "minecraft:campfire"
   },
   "result": {
     "id": "potionblender:brewing_cauldron",

@@ -24,6 +24,9 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
@@ -149,7 +152,7 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
 		brewingTickEnabled = false;
 		isBrewing = false;
 		this.resetProgress();
-		this.getBlockState().setValue(BrewingCauldron.IS_BREWING, false);
+		if (level != null) level.setBlockAndUpdate(getBlockPos(), getBlockState().setValue(BrewingCauldron.IS_BREWING, false));
 		this.setChanged();
 	}
 
@@ -214,14 +217,14 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
 
 
 	private Optional<BrewingCauldronRecipe> getRecipe() {
-		if (numberOfItems <= 0) {
+		if (!(level instanceof ServerLevel) || numberOfItems <= 0) {
 			return Optional.empty();
 		}
 		Container container = new SimpleContainer(
 				this.inventory.stream()
 						.filter(itemStack -> !itemStack.is(Items.AIR))
 						.toArray(ItemStack[]::new));
-		return quickCheck.getRecipeFor(new MultipleInputRecipe(container),level).map(RecipeHolder::value);
+		return quickCheck.getRecipeFor(new MultipleInputRecipe(container), (ServerLevel) level).map(RecipeHolder::value);
 	}
 
 
@@ -249,8 +252,9 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
 		}
 
 		//create and drop the potion contained all the effect of the previous potion
-		PotionContents contents = new PotionContents(Optional.empty(),Optional.empty(), finalPotionStatusEffects);
+		PotionContents contents = new PotionContents(Optional.empty(), Optional.empty(), finalPotionStatusEffects, Optional.empty());
 		potionItemStack.set(DataComponents.POTION_CONTENTS, contents);
+		potionItemStack.set(DataComponents.POTION_DURATION_SCALE, 1.0F);
 
 		outputItem(level, pos, potionItemStack);
 
@@ -361,13 +365,13 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
 		if (level.isClientSide()) {
 			return;
 		}
-		level.playSound(null, this.getBlockPos(), SoundEvents.BOAT_PADDLE_WATER, SoundSource.BLOCKS, 2 * level.random.nextFloat(), 1.0f);
+		level.playSound(null, this.getBlockPos(), SoundEvents.BOAT_PADDLE_WATER, SoundSource.BLOCKS, 2 * level.getRandom().nextFloat(), 1.0f);
 
 		//add potion to cauldron inventory
 		addItem(itemEntity.getItem());
 		waterColor = computeWaterColor();
 
-		if(itemEntity.getItem().getOrDefault(DataComponents.CUSTOM_NAME, "") instanceof Component component) {
+		if(itemEntity.getItem().get(DataComponents.CUSTOM_NAME) instanceof Component component) {
 			String customName = component.getString();
 			discoMode = customName.equals("jeb_");
 		}
@@ -405,22 +409,22 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
 	}
 
 	@Override
-	public void loadAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
-		super.loadAdditional(nbt, provider);
+	public void loadAdditional(@NotNull ValueInput nbt) {
+		super.loadAdditional(nbt);
 		this.inventory.clear();
-		ContainerHelper.loadAllItems(nbt, this.inventory,  provider);
-		this.numberOfItems = nbt.getInt(POTION_BLENDER_NBT_KEY + "_inv_size");
-		this.isBrewing = nbt.getBoolean(POTION_BLENDER_NBT_KEY + "_isBrewing");
-		this.brewingTickEnabled = nbt.getBoolean(POTION_BLENDER_NBT_KEY + "_canBrew");
-		this.waterColor = nbt.getInt(POTION_BLENDER_NBT_KEY + "_waterColor");
-		this.discoMode = nbt.getBoolean(POTION_BLENDER_NBT_KEY + "_discoMode");
+		ContainerHelper.loadAllItems(nbt, this.inventory);
+		this.numberOfItems = nbt.getIntOr(POTION_BLENDER_NBT_KEY + "_inv_size", 0);
+		this.isBrewing = nbt.getBooleanOr(POTION_BLENDER_NBT_KEY + "_isBrewing", false);
+		this.brewingTickEnabled = nbt.getBooleanOr(POTION_BLENDER_NBT_KEY + "_canBrew", false);
+		this.waterColor = nbt.getIntOr(POTION_BLENDER_NBT_KEY + "_waterColor", 0);
+		this.discoMode = nbt.getBooleanOr(POTION_BLENDER_NBT_KEY + "_discoMode", false);
 
 	}
 
 	@Override
-	protected void saveAdditional(@NotNull CompoundTag nbt, @NotNull HolderLookup.Provider provider) {
-		super.saveAdditional(nbt, provider);
-		ContainerHelper.saveAllItems(nbt, inventory, provider);
+	protected void saveAdditional(@NotNull ValueOutput nbt) {
+		super.saveAdditional(nbt);
+		ContainerHelper.saveAllItems(nbt, inventory);
 		nbt.putInt(POTION_BLENDER_NBT_KEY + "_inv_size", numberOfItems);
 		nbt.putBoolean(POTION_BLENDER_NBT_KEY + "_isBrewing", isBrewing);
 		nbt.putBoolean(POTION_BLENDER_NBT_KEY + "_canBrew", brewingTickEnabled);
@@ -446,7 +450,7 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
 		if (recipe.isPresent() && !recipe.get().usePotionMeringRules()) {
 			return recipe.get().getColor();
 		} else {
-			return PotionContents.getColor(getPotionsEffectFromItemInCauldron());
+			return PotionContents.getColorOptional(getPotionsEffectFromItemInCauldron()).orElse(Constants.WATER_TINT);
 		}
 	}
 
@@ -464,7 +468,7 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
 			ItemStack itemStack = inventory.get(i);
 			if (itemStack.has(DataComponents.POTION_CONTENTS)) {
 				PotionContents contents = itemStack.getOrDefault(DataComponents.POTION_CONTENTS,
-						new PotionContents(Optional.empty(), Optional.empty(), Collections.emptyList()));
+						PotionContents.EMPTY);
 				Iterators.addAll(effects, contents.getAllEffects().iterator());
 			}
 		}
@@ -496,10 +500,14 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
 		return numberOfItems;
 	}
 
-	@Override
-	public @NotNull CompoundTag getUpdateTag(HolderLookup.@NotNull Provider holderProvider) {
-		var tag = super.getUpdateTag(holderProvider);
-		saveAdditional(tag, holderProvider);
-		return tag;
-	}
+    @Override
+    public @NotNull CompoundTag getUpdateTag(HolderLookup.@NotNull Provider provider) {
+        return saveWithoutMetadata(provider);
+    }
+
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState newState) {
+        if (level != null && !level.isClientSide()) Containers.dropContents(level, getBlockPos(), inventory);
+        super.preRemoveSideEffects(pos, newState);
+    }
 }

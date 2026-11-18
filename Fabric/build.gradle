@@ -1,57 +1,49 @@
 plugins {
-    id 'fabric-loom'
-    id 'multiloader-loader'
+    id 'net.fabricmc.fabric-loom'
 }
-
-archivesBaseName = "${mod_name}-${minecraft_version}-FABRIC"
+version = rootProject.version
+group = rootProject.group
+base.archivesName = 'Potion-Blender-Fabric'
+repositories {
+    maven { url = 'https://maven.blamejared.com' }
+}
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
-    mappings loom.layered {
-        officialMojangMappings()
-        parchment("org.parchmentmc.data:parchment-${parchment_minecraft}:${parchment_version}@zip")
-    }
-    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
-
-    //Jei
-    compileOnly("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
-    modCompileOnlyApi("mezz.jei:jei-${minecraft_version}-fabric-api:${jei_version}")
-    // at runtime, use the full JEI jar for Fabric
-    modRuntimeOnly("mezz.jei:jei-${minecraft_version}-fabric:${jei_version}")
-
+    implementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-fabric-api:${jei_version}"
+    runtimeOnly "mezz.jei:jei-${minecraft_version}-fabric:${jei_version}"
+}
+sourceSets.main {
+    java.srcDir rootProject.file('common/src/main/java')
+    resources.srcDir rootProject.file('common/src/main/resources')
+}
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    withSourcesJar()
+}
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+    options.encoding = 'UTF-8'
+}
+processResources {
+    def properties = [version: project.version, mod_id: mod_id, mod_name: mod_name,
+                      description: description, mod_author: mod_author,
+                      fabric_loader_version: fabric_loader_version, minecraft_version: minecraft_version]
+    inputs.properties properties
+    filesMatching('fabric.mod.json') { expand properties }
+}
+jar {
+    from(rootProject.file('LICENSE')) { rename { 'LICENSE_Potion-Blender' } }
 }
 
-loom {
-    def aw = project(':common').file("src/main/resources/${mod_id}.accesswidener")
-    if (aw.exists()) {
-        accessWidenerPath.set(aw)
-    }
-    mixin {
-        defaultRefmapName.set("${mod_id}.refmap.json")
-    }
-    runs {
-        client {
-            client()
-            setConfigName('Fabric Client')
-            ideConfigGenerated(true)
-            runDir('runs/client')
-        }
-        server {
-            server()
-            setConfigName('Fabric Server')
-            ideConfigGenerated(true)
-            runDir('runs/server')
-        }
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'potionblender_test'
+        enableGameTests = true
+        enableClientGameTests = true
+        eula = true
     }
 }
-
-tasks.withType(JavaExec).configureEach {
-    if (System.getenv().RELEASE_MODE == null) {
-        enableAssertions = true
-    }
-}
-
-
-
-
-

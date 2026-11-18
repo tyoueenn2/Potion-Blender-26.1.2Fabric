@@ -3,7 +3,7 @@ package mod.motivationaldragon.potionblender.config;
 import com.google.gson.*;
 import mod.motivationaldragon.potionblender.Constants;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
@@ -18,7 +18,7 @@ public class ItemSerializer implements JsonSerializer<Item>, JsonDeserializer<It
 		@Override
 		public Item deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
 			String itemName = jsonElement.getAsString();
-			Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(itemName));
+			Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(itemName));
 			if(item == Items.AIR){
 				Constants.LOG.warn(String.format("Item %s was parsed as minecraft air! Are you sure the item name is valid?", itemName));
 			}

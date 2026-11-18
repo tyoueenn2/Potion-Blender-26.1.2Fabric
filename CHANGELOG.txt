@@ -1,3 +1,9 @@
+4.0.0+26.1.2
+- Port to Minecraft 26.1.2 and Fabric using Java 25.
+- Update recipes, item models, registry IDs, block entity persistence, and client rendering.
+- Update the optional JEI integration for 26.1.2.
+- Build and upload Fabric jars with GitHub Actions.
+
 3.1.2
 ===Bugfixes update===
 - Fix a registering bug preventing the game from starting

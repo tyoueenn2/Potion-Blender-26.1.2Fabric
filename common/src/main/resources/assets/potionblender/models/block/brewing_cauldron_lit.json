@@ -1,6 +1,6 @@
 {
 	"credit": "Made with Blockbench",
-	"parent": "minecraft:block/orientable",
+	"parent": "minecraft:block/block",
 	"ambientocclusion": true,
 	"textures": {
 		"log": "block/campfire_log",

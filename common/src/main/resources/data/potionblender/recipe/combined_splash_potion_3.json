@@ -1,24 +1,16 @@
 {
-  "type" : "potionblender:potion_blending",
-  "brewingTime" : 140,
+  "type": "potionblender:potion_blending",
+  "brewingTime": 140,
   "usePotionMergingRules": true,
   "isOrdered": true,
   "ingredients": [
-    {
-      "item": "minecraft:potion"
-    },
-    {
-      "item": "minecraft:potion"
-    },
-    {
-      "item": "minecraft:potion"
-    },
-    {
-      "item": "minecraft:gunpowder"
-    }
+    "minecraft:potion",
+    "minecraft:potion",
+    "minecraft:potion",
+    "minecraft:gunpowder"
   ],
-  "output" : {
-    "id" : "minecraft:splash_potion",
-    "count" : 1
+  "output": {
+    "id": "minecraft:splash_potion",
+    "count": 1
   }
 }

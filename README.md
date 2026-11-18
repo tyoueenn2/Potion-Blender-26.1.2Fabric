@@ -1,10 +1,18 @@
-# Potion Blender
+# Potion Blender — Fabric 26.1.2
 <p align="center">
   <a href="https://www.curseforge.com/minecraft/mc-mods/potion-blender"><img alt="Curseforge" src="https://img.shields.io/badge/Curseforge-%23242424?style=for-the-badge&logo=curseforge&labelColor=%23000000"></a>
   <a href="https://modrinth.com/mod/potion-blender"><img alt="Curseforge" src="https://img.shields.io/badge/ModRinth-%23242424?style=for-the-badge&logo=modrinth&labelColor=%23000000"></a>
   <a href="https://github.com/motivational-dragon/Potion-Blender"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-%23242424?style=for-the-badge&logo=github&labelColor=%23000000"></a>
   <a href="https://github.com/motivational-dragon/Potion-Blender/issues"><img alt="Issues" src="https://img.shields.io/badge/Issues-%23242424?style=for-the-badge&logo=github&labelColor=%23000000"></a>
 </p>
+
+This fork targets **Minecraft 26.1.2**, **Fabric Loader 0.20.1+**, **Fabric API 0.155.3+26.1.2**, and **Java 25**. JEI is optional.
+
+## Build and install
+
+Run `./gradlew build` with JDK 25. The mod jar is written to `Fabric/build/libs/Potion-Blender-Fabric-4.0.0+26.1.2.jar`. Copy it and Fabric API for 26.1.2 into your `mods` folder on both client and server.
+
+Based on [Motivational Dragon's original mod](https://github.com/motivational-dragon/Potion-Blender), preserving its GPLv3 license and authorship.
 
 ## Overview
 Potion Blender is a small mod to merge potion effects into one item, allowing for interesting combinations.
@@ -13,6 +21,10 @@ Potion Blender is a small mod to merge potion effects into one item, allowing fo
 <summary>Gif overview</summary>
 <img src="https://github.com/motivational-dragon/Potion-Blender/blob/b889de864c5940b860df42366c82e25ca3d16908/img/potion_craft.gif"  alt=""/>
 </details>
+
+## Validation
+
+`./gradlew build` runs the server GameTests. To also check client rendering and synchronized JEI recipes, run `./gradlew :Fabric:runClientGameTest` with a graphical display (or `xvfb-run -a` on Linux).
 
 ## How to use
 
@@ -49,7 +61,7 @@ Adding the same effect to a potion multiple times results in effects adding. It,
 Instant Effects does not stack as duplicated effects are lost.
 
 ## Configuration
-The configuration file is in your .minecraft folder at potionblender/potion_blender_config.json
+The configuration file is in your `.minecraft` folder at `config/potionblender/potion_blender_config.json`
 
 The configurable options are:
 
